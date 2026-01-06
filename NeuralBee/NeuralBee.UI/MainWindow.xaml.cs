@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Windowing;
+using WinRT;
 using WinRT.Interop;
 using Windows.Graphics;
 using NeuralBee.UI.Views; // Required for page views
@@ -15,7 +16,7 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         this.InitializeComponent();
-        this.Loaded += MainWindow_Loaded;
+        RootGrid.Loaded += MainWindow_Loaded;
         SetupWindow();
     }
 
@@ -43,7 +44,7 @@ public sealed partial class MainWindow : Window
     {
         if (_appWindow != null)
         {
-            var scale = this.AppWindow.RasterizationScale;
+            var scale = RootGrid.XamlRoot.RasterizationScale;
             _appWindow.TitleBar.SetDragRectangles(new RectInt32[]
             {
                 new RectInt32(

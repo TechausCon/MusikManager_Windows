@@ -11,6 +11,6 @@ public sealed partial class LibraryView : Page
     public LibraryView()
     {
         this.InitializeComponent();
-        ViewModel = (Application.Current as App).Host.Services.GetRequiredService<LibraryViewModel>();
+        ViewModel = App.Host.Services.GetRequiredService<LibraryViewModel>();
     }
 }
