@@ -7,12 +7,12 @@
     xmlns:converters="using:NeuralBee.UI.Converters"
     mc:Ignorable="d">
 
-    <Window.Resources>
-        <converters:TimeSpanToStringConverter x:Key="TimeSpanToStringConverter" />
-        <converters:SecondsToStringConverter x:Key="SecondsToStringConverter" />
-    </Window.Resources>
-
     <Grid x:Name="RootGrid">
+        <Grid.Resources>
+            <converters:TimeSpanToStringConverter x:Key="TimeSpanToStringConverter" />
+            <converters:SecondsToStringConverter x:Key="SecondsToStringConverter" />
+        </Grid.Resources>
+
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" /> <!-- For the custom title bar -->
             <RowDefinition Height="*" />

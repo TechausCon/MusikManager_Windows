@@ -6,17 +6,20 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
+// Alias to resolve ambiguity
+using CorePlaybackState = NeuralBee.Core.Interfaces.PlaybackState;
+
 namespace NeuralBee.Infrastructure.Audio;
 
 public class WasapiAudioService : IAudioService
 {
     private ISoundOut? _soundOut;
     private IWaveSource? _waveSource;
-    private PlaybackState _currentState = PlaybackState.Stopped;
+    private CorePlaybackState _currentState = CorePlaybackState.Stopped;
     private float _volume = 1.0f;
     private readonly SemaphoreSlim _loadingLock = new(1, 1);
 
-    public PlaybackState CurrentState
+    public CorePlaybackState CurrentState
     {
         get => _currentState;
         private set
@@ -60,7 +63,7 @@ public class WasapiAudioService : IAudioService
 
     public TimeSpan Duration => _waveSource?.GetLength() ?? TimeSpan.Zero;
 
-    public event Action<PlaybackState>? PlaybackStateChanged;
+    public event Action<CorePlaybackState>? PlaybackStateChanged;
     public event Action? MediaEnded;
 
     public async Task LoadAsync(string trackPath)
@@ -101,29 +104,29 @@ public class WasapiAudioService : IAudioService
     private void OnPlaybackStopped(object? sender, PlaybackStoppedEventArgs e)
     {
         // Differentiate between user-initiated Stop() and natural end of track
-        if (CurrentState == PlaybackState.Playing && _waveSource != null && _waveSource.GetPosition() >= _waveSource.GetLength())
+        if (CurrentState == CorePlaybackState.Playing && _waveSource != null && _waveSource.GetPosition() >= _waveSource.GetLength())
         {
             MediaEnded?.Invoke();
         }
 
-        CurrentState = PlaybackState.Stopped;
+        CurrentState = CorePlaybackState.Stopped;
     }
 
     public void Play()
     {
-        if (_soundOut != null && CurrentState != PlaybackState.Playing)
+        if (_soundOut != null && CurrentState != CorePlaybackState.Playing)
         {
             _soundOut.Play();
-            CurrentState = PlaybackState.Playing;
+            CurrentState = CorePlaybackState.Playing;
         }
     }
 
     public void Pause()
     {
-        if (_soundOut != null && CurrentState == PlaybackState.Playing)
+        if (_soundOut != null && CurrentState == CorePlaybackState.Playing)
         {
             _soundOut.Pause();
-            CurrentState = PlaybackState.Paused;
+            CurrentState = CorePlaybackState.Paused;
         }
     }
 
@@ -141,7 +144,7 @@ public class WasapiAudioService : IAudioService
         }
         else
         {
-            CurrentState = PlaybackState.Stopped;
+            CurrentState = CorePlaybackState.Stopped;
         }
     }
 
