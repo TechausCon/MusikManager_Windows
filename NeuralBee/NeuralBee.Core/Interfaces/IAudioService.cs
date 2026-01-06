@@ -3,7 +3,7 @@ namespace NeuralBee.Core.Interfaces;
 /// <summary>
 /// Defines the contract for an audio playback service.
 /// </summary>
-public interface IAudioService
+public interface IAudioService : IDisposable
 {
     /// <summary>
     /// Gets the current playback state.
@@ -16,9 +16,24 @@ public interface IAudioService
     double Volume { get; set; }
 
     /// <summary>
+    /// Gets or sets the current playback position.
+    /// </summary>
+    TimeSpan Position { get; set; }
+
+    /// <summary>
+    /// Gets the total duration of the currently loaded track.
+    /// </summary>
+    TimeSpan Duration { get; }
+
+    /// <summary>
     /// Occurs when the playback state changes.
     /// </summary>
     event Action<PlaybackState> PlaybackStateChanged;
+
+    /// <summary>
+    /// Occurs when the media has finished playing.
+    /// </summary>
+    event Action MediaEnded;
 
     /// <summary>
     /// Loads a track for playback.

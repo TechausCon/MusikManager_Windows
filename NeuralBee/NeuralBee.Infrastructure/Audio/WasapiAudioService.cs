@@ -1,47 +1,171 @@
+using CSCore;
+using CSCore.Codecs;
+using CSCore.SoundOut;
 using NeuralBee.Core.Interfaces;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NeuralBee.Infrastructure.Audio;
 
 public class WasapiAudioService : IAudioService
 {
-    public PlaybackState CurrentState { get; private set; } = PlaybackState.Stopped;
+    private ISoundOut? _soundOut;
+    private IWaveSource? _waveSource;
+    private PlaybackState _currentState = PlaybackState.Stopped;
+    private float _volume = 1.0f;
+    private readonly SemaphoreSlim _loadingLock = new(1, 1);
 
-    public double Volume { get; set; } = 1.0;
-
-    public event Action<PlaybackState> PlaybackStateChanged;
-
-    public Task LoadAsync(string trackPath)
+    public PlaybackState CurrentState
     {
-        // Placeholder for loading logic
-        return Task.CompletedTask;
+        get => _currentState;
+        private set
+        {
+            if (_currentState != value)
+            {
+                _currentState = value;
+                PlaybackStateChanged?.Invoke(_currentState);
+            }
+        }
     }
 
-    public void Pause()
+    public double Volume
     {
-        if (CurrentState == PlaybackState.Playing)
+        get => _volume;
+        set
         {
-            CurrentState = PlaybackState.Paused;
-            PlaybackStateChanged?.Invoke(CurrentState);
+            _volume = (float)Math.Clamp(value, 0.0, 1.0);
+            if (_soundOut != null)
+            {
+                _soundOut.Volume = _volume;
+            }
         }
+    }
+
+    public TimeSpan Position
+    {
+        get => _waveSource?.GetPosition() ?? TimeSpan.Zero;
+        set
+        {
+            if (_waveSource != null)
+            {
+                // Clamp position to duration
+                if (value > Duration) value = Duration;
+                if (value < TimeSpan.Zero) value = TimeSpan.Zero;
+
+                _waveSource.SetPosition(value);
+            }
+        }
+    }
+
+    public TimeSpan Duration => _waveSource?.GetLength() ?? TimeSpan.Zero;
+
+    public event Action<PlaybackState>? PlaybackStateChanged;
+    public event Action? MediaEnded;
+
+    public async Task LoadAsync(string trackPath)
+    {
+        await _loadingLock.WaitAsync();
+        try
+        {
+            StopInternal(); // Stop any existing playback synchronously
+            Cleanup();      // Clean up old resources
+
+            // Run codec creation on a background thread
+            await Task.Run(() =>
+            {
+                try
+                {
+                    _waveSource = CodecFactory.Instance.GetCodec(trackPath)
+                        .ToSampleSource()
+                        .ToWaveSource();
+
+                    _soundOut = new WasapiOut();
+                    _soundOut.Initialize(_waveSource);
+                    _soundOut.Volume = _volume;
+                    _soundOut.Stopped += OnPlaybackStopped;
+                }
+                catch (Exception)
+                {
+                    Cleanup();
+                    throw;
+                }
+            });
+        }
+        finally
+        {
+            _loadingLock.Release();
+        }
+    }
+
+    private void OnPlaybackStopped(object? sender, PlaybackStoppedEventArgs e)
+    {
+        // Differentiate between user-initiated Stop() and natural end of track
+        if (CurrentState == PlaybackState.Playing && _waveSource != null && _waveSource.GetPosition() >= _waveSource.GetLength())
+        {
+            MediaEnded?.Invoke();
+        }
+
+        CurrentState = PlaybackState.Stopped;
     }
 
     public void Play()
     {
-        if (CurrentState == PlaybackState.Paused || CurrentState == PlaybackState.Stopped)
+        if (_soundOut != null && CurrentState != PlaybackState.Playing)
         {
+            _soundOut.Play();
             CurrentState = PlaybackState.Playing;
-            PlaybackStateChanged?.Invoke(CurrentState);
+        }
+    }
+
+    public void Pause()
+    {
+        if (_soundOut != null && CurrentState == PlaybackState.Playing)
+        {
+            _soundOut.Pause();
+            CurrentState = PlaybackState.Paused;
         }
     }
 
     public void Stop()
     {
-        if (CurrentState != PlaybackState.Stopped)
+        StopInternal();
+    }
+
+    private void StopInternal()
+    {
+        if (_soundOut != null)
+        {
+            _soundOut.Stop();
+            // CurrentState update is handled in OnPlaybackStopped
+        }
+        else
         {
             CurrentState = PlaybackState.Stopped;
-            PlaybackStateChanged?.Invoke(CurrentState);
         }
+    }
+
+    private void Cleanup()
+    {
+        if (_soundOut != null)
+        {
+            _soundOut.Stopped -= OnPlaybackStopped;
+            _soundOut.Dispose();
+            _soundOut = null;
+        }
+
+        if (_waveSource != null)
+        {
+            _waveSource.Dispose();
+            _waveSource = null;
+        }
+    }
+
+    public void Dispose()
+    {
+        Stop();
+        Cleanup();
+        _loadingLock.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

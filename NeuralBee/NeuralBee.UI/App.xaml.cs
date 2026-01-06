@@ -27,6 +27,7 @@ public partial class App : Application
                 // Register ViewModels
                 services.AddTransient<MainViewModel>();
                 services.AddTransient<LibraryViewModel>();
+                services.AddSingleton<PlayerViewModel>();
 
                 // Register Views (as services to be resolved)
                 services.AddTransient<MainWindow>();
@@ -37,8 +38,10 @@ public partial class App : Application
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         m_window = Host.Services.GetRequiredService<MainWindow>();
+        MainWindow = m_window; // Expose specifically for ViewModels needing HWND
         m_window.Activate();
     }
 
     private Window m_window;
+    public static Window MainWindow { get; private set; }
 }

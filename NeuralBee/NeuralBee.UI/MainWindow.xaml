@@ -4,7 +4,13 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:converters="using:NeuralBee.UI.Converters"
     mc:Ignorable="d">
+
+    <Window.Resources>
+        <converters:TimeSpanToStringConverter x:Key="TimeSpanToStringConverter" />
+        <converters:SecondsToStringConverter x:Key="SecondsToStringConverter" />
+    </Window.Resources>
 
     <Grid x:Name="RootGrid">
         <Grid.RowDefinitions>
@@ -40,16 +46,79 @@
         </NavigationView>
 
         <!-- Player Controls Area -->
-        <Border Grid.Row="2"
+        <Border x:Name="PlayerControlsBorder"
+                Grid.Row="2"
                 Background="{ThemeResource SystemControlAccentAcrylicWindowAccentMediumHighBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="0,1,0,0">
-            <Grid>
-                <TextBlock Text="Player Controls Placeholder"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           Foreground="{ThemeResource TextFillColorPrimaryBrush}"
-                           FontSize="16"/>
+            <Grid Padding="20,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Track Info / Open Button -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
+                    <Button Command="{Binding OpenFileCommand}" ToolTipService.ToolTip="Open File">
+                        <FontIcon Glyph="&#xE8E5;" />
+                    </Button>
+                    <TextBlock Text="{Binding TrackTitle}"
+                               VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"
+                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                </StackPanel>
+
+                <!-- Transport Controls -->
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="5">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="20">
+                        <!-- Stop Button -->
+                        <AppBarButton Icon="Stop" Command="{Binding StopCommand}" LabelPosition="Collapsed"/>
+
+                        <!-- Play/Pause Button -->
+                        <AppBarButton Command="{Binding PlayPauseCommand}" LabelPosition="Collapsed">
+                            <AppBarButton.Icon>
+                                <FontIcon Glyph="{Binding PlayPauseIcon}" />
+                            </AppBarButton.Icon>
+                        </AppBarButton>
+                    </StackPanel>
+
+                    <!-- Seek Slider -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Text="{Binding CurrentPosition, Converter={StaticResource TimeSpanToStringConverter}}"
+                                   VerticalAlignment="Center" Margin="0,0,10,0" FontSize="12"/>
+
+                        <Slider Grid.Column="1"
+                                Minimum="0"
+                                Maximum="{Binding TotalDuration.TotalSeconds, Mode=OneWay}"
+                                Value="{Binding CurrentPosition.TotalSeconds, Mode=OneWay}"
+                                VerticalAlignment="Center"
+                                ThumbToolTipValueConverter="{StaticResource SecondsToStringConverter}"
+                                PointerPressed="OnSeekSliderPointerPressed"
+                                PointerReleased="OnSeekSliderPointerReleased"/>
+
+                        <TextBlock Grid.Column="2"
+                                   Text="{Binding TotalDuration, Converter={StaticResource TimeSpanToStringConverter}}"
+                                   VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12"/>
+                    </Grid>
+                </StackPanel>
+
+                <!-- Volume -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="10">
+                    <FontIcon Glyph="&#xE767;" />
+                    <Slider Width="100"
+                            Minimum="0"
+                            Maximum="1"
+                            StepFrequency="0.01"
+                            Value="{Binding Volume, Mode=TwoWay}"
+                            VerticalAlignment="Center"/>
+                </StackPanel>
             </Grid>
         </Border>
     </Grid>
